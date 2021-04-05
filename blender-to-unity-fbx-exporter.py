@@ -216,8 +216,6 @@ def export_unity_fbx(context, filepath, active_collection, selected_objects, def
 		for col in disabled_collections:
 			col.collection.hide_viewport = True
 
-		
-
 		# Export FBX file
 		if export_individual_file:
 
@@ -227,7 +225,7 @@ def export_unity_fbx(context, filepath, active_collection, selected_objects, def
 				bpy.ops.object.select_all(action='DESELECT')
 				ob.select_set(True)
 
-				params = dict(filepath=dir + "/" + ob.name + ".fbx", apply_scale_options='FBX_SCALE_UNITS', object_types={'EMPTY', 'MESH', 'ARMATURE'}, use_active_collection=active_collection, use_selection=selected_objects, use_armature_deform_only=deform_bones, add_leaf_bones=leaf_bones)
+				params = dict(filepath=dir + "/" + ob.name + ".fbx", apply_scale_options='FBX_SCALE_UNITS', object_types={'EMPTY', 'MESH', 'ARMATURE'}, use_active_collection=active_collection, use_selection=True, use_armature_deform_only=deform_bones, add_leaf_bones=leaf_bones)
 
 				print("Invoking default FBX Exporter:", params)
 				bpy.ops.export_scene.fbx(**params)
