@@ -3,7 +3,7 @@ bl_info = {
 	"author": "Angel 'Edy' Garcia (@VehiclePhysics)",
 	"version": (1, 3, 1),
 	"blender": (2, 80, 0),
-	"location": "File > Export > Unity FBX GoncaloRod",
+	"location": "File > Export > Unity FBX",
 	"description": "FBX exporter compatible with Unity's coordinate and scaling system.",
 	"warning": "",
 	"wiki_url": "",
@@ -14,6 +14,7 @@ bl_info = {
 import bpy
 import mathutils
 import math
+import os
 
 
 # Multi-user datablocks are preserved here. Unique copies are made for applying the rotation.
@@ -150,7 +151,7 @@ def fix_object(ob, move_to_center, depth = 0):
 		fix_object(child, depth = depth + 1)
 
 
-def export_unity_fbx(context, filepath, active_collection, selected_objects, deform_bones, leaf_bones, move_to_center):
+def export_unity_fbx(context, filepath, active_collection, selected_objects, deform_bones, leaf_bones, move_to_center, export_individual_file):
 	global shared_data
 	global hidden_collections
 	global hidden_objects
@@ -215,17 +216,33 @@ def export_unity_fbx(context, filepath, active_collection, selected_objects, def
 		for col in disabled_collections:
 			col.collection.hide_viewport = True
 
-		# Restore selection
-		bpy.ops.object.select_all(action='DESELECT')
-		for ob in selection:
-			ob.select_set(True)
+		
 
 		# Export FBX file
+		if export_individual_file:
 
-		params = dict(filepath=filepath, apply_scale_options='FBX_SCALE_UNITS', object_types={'EMPTY', 'MESH', 'ARMATURE'}, use_active_collection=active_collection, use_selection=selected_objects, use_armature_deform_only=deform_bones, add_leaf_bones=leaf_bones)
+			dir, filename = os.path.split(filepath)
 
-		print("Invoking default FBX Exporter:", params)
-		bpy.ops.export_scene.fbx(**params)
+			for ob in selection:
+				bpy.ops.object.select_all(action='DESELECT')
+				ob.select_set(True)
+
+				params = dict(filepath=dir + "/" + ob.name + ".fbx", apply_scale_options='FBX_SCALE_UNITS', object_types={'EMPTY', 'MESH', 'ARMATURE'}, use_active_collection=active_collection, use_selection=selected_objects, use_armature_deform_only=deform_bones, add_leaf_bones=leaf_bones)
+
+				print("Invoking default FBX Exporter:", params)
+				bpy.ops.export_scene.fbx(**params)
+
+		else:
+
+			# Restore selection
+			bpy.ops.object.select_all(action='DESELECT')
+			for ob in selection:
+				ob.select_set(True)
+
+			params = dict(filepath=filepath, apply_scale_options='FBX_SCALE_UNITS', object_types={'EMPTY', 'MESH', 'ARMATURE'}, use_active_collection=active_collection, use_selection=selected_objects, use_armature_deform_only=deform_bones, add_leaf_bones=leaf_bones)
+
+			print("Invoking default FBX Exporter:", params)
+			bpy.ops.export_scene.fbx(**params)
 
 	except Exception as e:
 		bpy.ops.ed.undo_push(message="")
@@ -303,6 +320,12 @@ class ExportUnityFbx(Operator, ExportHelper):
 		default=True,
 	)
 
+	export_individual_file: BoolProperty(
+		name="Export to individual files",
+		description="Export each object to his individual file. File user input name will be ignored and object name will be used. \"Selected Objects Only\" option is on by default.",
+		default=True,
+	)
+
 	# Custom draw method
 	# https://blender.stackexchange.com/questions/55437/add-gui-elements-to-exporter-window
 	# https://docs.blender.org/api/current/bpy.types.UILayout.html
@@ -325,14 +348,16 @@ class ExportUnityFbx(Operator, ExportHelper):
 		row.label(text = "Extra options")
 		row = layout.row()
 		row.prop(self, "move_to_center")
+		row = layout.row()
+		row.prop(self, "export_individual_file")
 
 	def execute(self, context):
-		return export_unity_fbx(context, self.filepath, self.active_collection, self.selected_objects, self.deform_bones, self.leaf_bones, self.move_to_center)
+		return export_unity_fbx(context, self.filepath, self.active_collection, self.selected_objects, self.deform_bones, self.leaf_bones, self.move_to_center, self.export_individual_file)
 
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_export(self, context):
-	self.layout.operator(ExportUnityFbx.bl_idname, text="Unity FBX GoncaloRod (.fbx)")
+	self.layout.operator(ExportUnityFbx.bl_idname, text="Unity FBX (.fbx)")
 
 
 def register():
