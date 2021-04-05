@@ -1,9 +1,9 @@
 bl_info = {
-	"name": "Unity FBX format",
+	"name": "Unity FBX format (modified by GoncaloRod)",
 	"author": "Angel 'Edy' Garcia (@VehiclePhysics)",
-	"version": (1, 3, 1),
+	"version": (1, 3, 2),
 	"blender": (2, 80, 0),
-	"location": "File > Export > Unity FBX",
+	"location": "File > Export > Unity FBX (GoncaloRod)",
 	"description": "FBX exporter compatible with Unity's coordinate and scaling system.",
 	"warning": "",
 	"wiki_url": "",
@@ -123,7 +123,7 @@ def apply_rotation(ob):
 	bpy.ops.object.transform_apply(location = False, rotation = True, scale = False)
 
 
-def fix_object(ob):
+def fix_object(ob, move_to_center, depth = 0):
 	# Only fix objects in current view layer
 	if ob.name in bpy.context.view_layer.objects:
 
@@ -140,13 +140,17 @@ def fix_object(ob):
 		# Reapply the previous local transform with an X+90 rotation
 		ob.matrix_local = mat_original @ mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
 
+		if move_to_center and depth == 0:
+			# Move object to position (0, 0, 0)
+			ob.matrix_local = mathutils.Matrix.Translation(mathutils.Vector((0, 0, 0)))
+
 	# Recursively fix child objects in current view layer.
 	# Children may be in the current view layer even if their parent isn't.
 	for child in ob.children:
-		fix_object(child)
+		fix_object(child, depth = depth + 1)
 
 
-def export_unity_fbx(context, filepath, active_collection, selected_objects, deform_bones, leaf_bones):
+def export_unity_fbx(context, filepath, active_collection, selected_objects, deform_bones, leaf_bones, move_to_center):
 	global shared_data
 	global hidden_collections
 	global hidden_objects
@@ -190,7 +194,7 @@ def export_unity_fbx(context, filepath, active_collection, selected_objects, def
 		# Fix rotations
 		for ob in root_objects:
 			print(ob.name)
-			fix_object(ob)
+			fix_object(ob, move_to_center)
 
 		# Restore multi-user meshes
 		for item in shared_data:
@@ -292,6 +296,12 @@ class ExportUnityFbx(Operator, ExportHelper):
 		description="Append a final bone to the end of each chain to specify last bone length (use this when you intend to edit the armature from exported data)",
 		default=False,
 	)
+	
+	move_to_center: BoolProperty(
+		name="Move to center",
+		description="Move object to position (0, 0, 0) when exporting",
+		default=True,
+	)
 
 	# Custom draw method
 	# https://blender.stackexchange.com/questions/55437/add-gui-elements-to-exporter-window
@@ -311,9 +321,13 @@ class ExportUnityFbx(Operator, ExportHelper):
 		row.prop(self, "deform_bones")
 		row = layout.row()
 		row.prop(self, "leaf_bones")
+		row = layout.row()
+		row.label(text = "Extra options")
+		row = layout.row()
+		row.prop(self, "move_to_center")
 
 	def execute(self, context):
-		return export_unity_fbx(context, self.filepath, self.active_collection, self.selected_objects, self.deform_bones, self.leaf_bones)
+		return export_unity_fbx(context, self.filepath, self.active_collection, self.selected_objects, self.deform_bones, self.leaf_bones, self.move_to_center)
 
 
 # Only needed if you want to add into a dynamic menu
