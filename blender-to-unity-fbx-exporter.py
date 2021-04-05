@@ -1,9 +1,9 @@
 bl_info = {
 	"name": "Unity FBX format (modified by GoncaloRod)",
 	"author": "Angel 'Edy' Garcia (@VehiclePhysics)",
-	"version": (1, 3, 2),
+	"version": (1, 3, 1),
 	"blender": (2, 80, 0),
-	"location": "File > Export > Unity FBX (GoncaloRod)",
+	"location": "File > Export > Unity FBX GoncaloRod",
 	"description": "FBX exporter compatible with Unity's coordinate and scaling system.",
 	"warning": "",
 	"wiki_url": "",
@@ -332,7 +332,7 @@ class ExportUnityFbx(Operator, ExportHelper):
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_export(self, context):
-	self.layout.operator(ExportUnityFbx.bl_idname, text="Unity FBX (.fbx)")
+	self.layout.operator(ExportUnityFbx.bl_idname, text="Unity FBX GoncaloRod (.fbx)")
 
 
 def register():
