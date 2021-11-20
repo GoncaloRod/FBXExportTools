@@ -1,7 +1,8 @@
 bl_info = {
 	"name": "Unity FBX Exporter",
 	"author": "GoncaloRod",
-	"version": "0.1.0b",
+	"version": (0, 1, 0),
+	"blender": (2, 93, 0),
 	"location": "File > Export > Unity FBX Exporter",
 	"description": "Set of tools to automate exports from Blender to Unity.",
 	"category": "Import-Export"
