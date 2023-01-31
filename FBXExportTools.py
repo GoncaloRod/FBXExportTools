@@ -1,10 +1,10 @@
 bl_info = {
-	"name": "Unity FBX Exporter",
+	"name": "FBX Export Tools",
 	"author": "GoncaloRod",
 	"version": (0, 1, 0),
-	"blender": (2, 93, 0),
-	"location": "File > Export > Unity FBX Exporter",
-	"description": "Set of tools to automate exports from Blender to Unity.",
+	"blender": (2, 80, 0),
+	"location": "File > Export > FBX Export Tools",
+	"description": "Set of tools to automate some FBX export procedures.",
 	"category": "Import-Export"
 }
 
@@ -156,14 +156,12 @@ def fix_object(ob, move_to_center, depth = 0):
 		fix_object(child, depth = depth + 1)
 
 
-def export_unity_fbx(context, filepath, active_collection, selected_objects, move_to_center, export_individual_file):
+def export(context, filepath, active_collection, selected_objects, move_to_center, export_individual_file, fix_unity_rotation):
 	global shared_data
 	global hidden_collections
 	global hidden_objects
 	global disabled_collections
 	global disabled_objects
-
-	print("Preparing 3D model for Unity...")
 
 	# Root objects: Empty, Mesh or Armature without parent
 	root_objects = [item for item in bpy.data.objects if (item.type == "EMPTY" or item.type == "MESH" or item.type == "ARMATURE" or item.type == "OTHER") and not item.parent]
@@ -198,9 +196,10 @@ def export_unity_fbx(context, filepath, active_collection, selected_objects, mov
 
 	try:
 		# Fix rotations
-		for ob in root_objects:
-			print(ob.name)
-			fix_object(ob, move_to_center)
+		if (fix_unity_rotation):
+			for ob in root_objects:
+				print(ob.name)
+				fix_object(ob, move_to_center)
 
 		# Restore multi-user meshes
 		for item in shared_data:
@@ -282,46 +281,52 @@ from bpy.props import StringProperty, BoolProperty, EnumProperty
 from bpy.types import Operator
 
 
-class ExportUnityFbx(Operator, ExportHelper):
-	"""Set of tools to automate FBX export for Unity."""
-	bl_idname = "export_scene.unity_fbx"
-	bl_label = "Unity FBX Exporter"
-	bl_options = {'UNDO_GROUPED'}
+class FBXExportTools(Operator, ExportHelper):
+	"""Set of tools to automate some FBX export procedures."""
+	bl_idname 	= "export_scene.unity_fbx"
+	bl_label 	= "Unity FBX Exporter"
+	bl_options 	= {'UNDO_GROUPED'}
 
 	# ExportHelper mixin class uses this
 	filename_ext = ".fbx"
 
 	filter_glob: StringProperty(
-		default="*.fbx",
-		options={'HIDDEN'},
-		maxlen=255,  # Max internal buffer length, longer would be clamped.
+		default = "*.fbx",
+		options = {'HIDDEN'},
+		maxlen 	= 255
 	)
 
 	# List of operator properties, the attributes will be assigned
 	# to the class instance from the operator settings before calling.
 
 	active_collection: BoolProperty(
-		name="Active Collection Only",
-		description="Export objects in the active collection only (and its children). May be combined with Selected Objects Only.",
-		default=False,
+		name 		= "Active Collection Only",
+		description = "Export objects in the active collection only (and its children). May be combined with Selected Objects Only.",
+		default 	= False,
 	)
 
 	selected_objects: BoolProperty(
-		name="Selected Objects Only",
-		description="Export selected objects only. May be combined with Active Collection Only.",
-		default=False,
+		name 		= "Selected Objects Only",
+		description = "Export selected objects only. May be combined with Active Collection Only.",
+		default 	= True,
 	)
 	
 	move_to_center: BoolProperty(
-		name="Move to center",
-		description="Move object to position (0, 0, 0) when exporting",
-		default=True,
+		name 		= "Move to center",
+		description = "Move object to position (0, 0, 0) when exporting",
+		default 	= False,
 	)
 
 	export_individual_file: BoolProperty(
-		name="Export to individual files",
-		description="Export each object and its children to his individual file.\nFile user input name will be ignored and object name will be used. \"Selected Objects Only\" option is on by default.",
-		default=False,
+		name 		= "Export to individual files",
+		description = "Export each object and its children to his individual file.\nFile user input name will be ignored and object name will be used. \"Selected Objects Only\" option is on by default.",
+		default 	= False,
+	)
+
+	fix_unity_rotation : BoolProperty(
+		name 		= "Fix rotation for Unity",
+		description = "Fix object rotation for Unity's coordinate system.",
+		default 	= False
 	)
 
 	# Custom draw method
@@ -343,27 +348,27 @@ class ExportUnityFbx(Operator, ExportHelper):
 		row = layout.row()
 		row.prop(self, "export_individual_file")
 
+		row = layout.row()
+		row.prop(self, "fix_unity_rotation")
+
 	def execute(self, context):
-		return export_unity_fbx(context, self.filepath, self.active_collection, self.selected_objects, self.move_to_center, self.export_individual_file)
+		return export(context, self.filepath, self.active_collection, self.selected_objects, self.move_to_center, self.export_individual_file, self.fix_unity_rotation)
 
 
 # Only needed if you want to add into a dynamic menu
 def menu_func_export(self, context):
-	self.layout.operator(ExportUnityFbx.bl_idname, text="Unity FBX Exporter (.fbx)")
+	self.layout.operator(FBXExportTools.bl_idname, text="FBX Export Tools (.fbx)")
 
 
 def register():
-	bpy.utils.register_class(ExportUnityFbx)
+	bpy.utils.register_class(FBXExportTools)
 	bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 
 def unregister():
-	bpy.utils.unregister_class(ExportUnityFbx)
+	bpy.utils.unregister_class(FBXExportTools)
 	bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 
 if __name__ == "__main__":
 	register()
-
-	# test call
-	bpy.ops.export_scene.unity_fbx('INVOKE_DEFAULT')
