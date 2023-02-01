@@ -1,7 +1,7 @@
 bl_info = {
 	"name": "FBX Export Tools",
 	"author": "GoncaloRod",
-	"version": (0, 1, 0),
+	"version": (0, 2, 1),
 	"blender": (2, 80, 0),
 	"location": "File > Export > FBX Export Tools",
 	"description": "Set of tools to automate some FBX export procedures.",
@@ -127,24 +127,24 @@ def apply_rotation(ob):
 	bpy.ops.object.transform_apply(location = False, rotation = True, scale = False)
 
 
-def fix_object(ob, move_to_center, depth = 0):
+def fix_object(ob, fix_rotation, move_to_center, depth = 0):
 	# Only fix objects in current view layer
 	if ob.name in bpy.context.view_layer.objects:
+		if fix_rotation:
+			apply_transforms(ob)
+			
+			# Reset parent's inverse so we can work with local transform directly
+			reset_parent_inverse(ob)
 
-		apply_transforms(ob)
-		
-		# Reset parent's inverse so we can work with local transform directly
-		reset_parent_inverse(ob)
+			# Create a copy of the local matrix and set a pure X-90 matrix
+			mat_original = ob.matrix_local.copy()
+			ob.matrix_local = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
 
-		# Create a copy of the local matrix and set a pure X-90 matrix
-		mat_original = ob.matrix_local.copy()
-		ob.matrix_local = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
+			# Apply the rotation to the object
+			apply_rotation(ob)
 
-		# Apply the rotation to the object
-		apply_rotation(ob)
-
-		# Reapply the previous local transform with an X+90 rotation
-		ob.matrix_local = mat_original @ mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
+			# Reapply the previous local transform with an X+90 rotation
+			ob.matrix_local = mat_original @ mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
 
 		if move_to_center and depth == 0:
 			# Move object to position (0, 0, 0)
@@ -195,11 +195,10 @@ def export(context, filepath, active_collection, selected_objects, move_to_cente
 	apply_object_modifiers()
 
 	try:
-		# Fix rotations
-		if (fix_unity_rotation):
-			for ob in root_objects:
-				print(ob.name)
-				fix_object(ob, move_to_center)
+		# Fix objects
+		for ob in root_objects:
+			print(ob.name)
+			fix_object(ob, fix_unity_rotation, move_to_center)
 
 		# Restore multi-user meshes
 		for item in shared_data:
@@ -237,7 +236,8 @@ def export(context, filepath, active_collection, selected_objects, move_to_cente
 					object_types = { 'EMPTY', 'ARMATURE', 'MESH', 'OTHER' },
 					use_mesh_modifiers = True,
 					add_leaf_bones = False,
-					use_armature_deform_only = True
+					use_armature_deform_only = True,
+					mesh_smooth_type = "EDGE"
 				)
 		else:
 
@@ -254,7 +254,8 @@ def export(context, filepath, active_collection, selected_objects, move_to_cente
 				object_types = { 'EMPTY', 'ARMATURE', 'MESH', 'OTHER' },
 				use_mesh_modifiers = True,
 				add_leaf_bones = False,
-				use_armature_deform_only = True
+				use_armature_deform_only = True,
+				mesh_smooth_type = "EDGE"
 			)
 
 	except Exception as e:
@@ -283,8 +284,8 @@ from bpy.types import Operator
 
 class FBXExportTools(Operator, ExportHelper):
 	"""Set of tools to automate some FBX export procedures."""
-	bl_idname 	= "export_scene.unity_fbx"
-	bl_label 	= "Unity FBX Exporter"
+	bl_idname 	= "export_scene.fbx_export_tools"
+	bl_label 	= "Export"
 	bl_options 	= {'UNDO_GROUPED'}
 
 	# ExportHelper mixin class uses this
